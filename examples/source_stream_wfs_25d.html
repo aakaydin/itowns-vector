@@ -1,0 +1,104 @@
+<html>
+    <head>
+        <title>Itowns - WFS (geojson) example</title>
+
+        <meta charset="UTF-8">
+        <link rel="stylesheet" type="text/css" href="css/example.css">
+        <link rel="stylesheet" type="text/css" href="css/LoadingScreen.css">
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
+    </head>
+    <body>
+        <div id="description">
+            <p>Key bindings</p>
+            <ul>
+              <li>Left-Click: camera translation (drag)</li>
+              <li>Right-Click: camera translation (pan)</li>
+              <li>Ctrl + Left-Click: camera rotation (orbit)</li>
+              <li>Spacebar / Wheel-Click: smart zoom</li>
+              <li>Mouse Wheel: zoom in/out</li>
+              <li>T: orient camera to a top view</li>
+              <li>Y: move camera to start position</li>
+            </ul>
+            <br />
+            <p><b>Information Batiment</b></p>
+            <ul id="info"></ul>
+        </div>
+        <div id="viewerDiv"></div>
+        <script src="js/GUI/GuiTools.js"></script>
+        <script src="../dist/itowns.js"></script>
+        <script src="js/GUI/LoadingScreen.js"></script>
+        <script src="../dist/debug.js"></script>
+        <script src="js/plugins/FeatureToolTip.js"></script>
+        <script type="text/javascript">
+            // Define crs projection that we will use (taken from https://epsg.io/3946, Proj4js section)
+            itowns.proj4.defs('EPSG:2154','+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+            /* global itowns,document, setupLoadingScreen, window */
+
+            // Define geographic extent: CRS, min/max X, min/max Y
+            const extent = new itowns.Extent(
+                'EPSG:2154',
+                230500, 230900,
+                6759500, 6759900);
+
+            // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
+            viewerDiv = document.getElementById('viewerDiv');
+
+            // Instanciate PlanarView*
+            view = new itowns.PlanarView(viewerDiv, extent, {
+                maxSubdivisionLevel: 18,
+                placement: {
+                    coord: new itowns.Coordinates('EPSG:2154',  230772.61032104492,
+                            6759574.437865883, 0),
+                    heading: -45,
+                    range: 20,
+                    tilt: 30,
+                }
+            });
+
+            var menuGlobe = new GuiTools('menuDiv', view);
+
+            const optionsGeoJsonParser = {
+                in: {
+                    crs: 'EPSG:2154',
+                },
+                out: {
+                    crs: view.tileLayer.extent.crs,
+                    buildExtent: true,
+                    mergeFeatures: true,
+                    structure: '2d',
+                }
+            };
+
+            itowns.Fetcher.json('./activePatchs.json')
+                .then(function _(geojson) {
+                    return itowns.GeoJsonParser.parse(geojson, optionsGeoJsonParser);
+                }).then(function _(features) {
+                    var pyoSource = new itowns.FileSource({ features });
+
+                    var pyoStyle = new itowns.Style({
+                        fill: {
+                            color: 'white',
+                            opacity: 0.8,
+                        },
+                        stroke: {
+                            color:'IndianRed',
+                        },
+                    });
+
+                    var pyoLayer = new itowns.ColorLayer('pyrenees-orientales', {
+                        name: 'pyrenees-orientales',
+                        transparent: true,
+                        source: pyoSource,
+                        style: pyoStyle,
+                    });
+
+                    return view.addLayer(pyoLayer);
+                });
+
+            debug.createTileDebugUI(menuGlobe.gui, view);
+
+        </script>
+    </body>
+</html>
